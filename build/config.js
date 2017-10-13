@@ -17,7 +17,7 @@ const banner =
 
 const weexFactoryPlugin = {
   intro () {
-    return 'module.exports = function weexFactory (exports, document) {'
+    return 'module.exports = function weexFactory (exports, renderer) {'
   },
   outro () {
     return '}'
@@ -107,15 +107,6 @@ const builds = {
     format: 'cjs',
     external: Object.keys(require('../packages/vue-template-compiler/package.json').dependencies)
   },
-  // Web compiler (UMD for in-browser use).
-  'web-compiler-browser': {
-    entry: resolve('web/entry-compiler.js'),
-    dest: resolve('packages/vue-template-compiler/browser.js'),
-    format: 'umd',
-    env: 'development',
-    moduleName: 'VueTemplateCompiler',
-    plugins: [node(), cjs()]
-  },
   // Web server renderer (CommonJS).
   'web-server-renderer': {
     entry: resolve('web/entry-server-renderer.js'),
@@ -168,11 +159,14 @@ const builds = {
   }
 }
 
-function genConfig (name) {
-  const opts = builds[name]
+function genConfig (opts) {
   const config = {
-    input: opts.entry,
+    entry: opts.entry,
+    dest: opts.dest,
     external: opts.external,
+    format: opts.format,
+    banner: opts.banner,
+    moduleName: opts.moduleName || 'Vue',
     plugins: [
       replace({
         __WEEX__: !!opts.weex,
@@ -182,13 +176,7 @@ function genConfig (name) {
       flow(),
       buble(),
       alias(Object.assign({}, aliases, opts.alias))
-    ].concat(opts.plugins || []),
-    output: {
-      file: opts.dest,
-      format: opts.format,
-      banner: opts.banner,
-      name: opts.moduleName || 'Vue'
-    }
+    ].concat(opts.plugins || [])
   }
 
   if (opts.env) {
@@ -197,17 +185,12 @@ function genConfig (name) {
     }))
   }
 
-  Object.defineProperty(config, '_name', {
-    enumerable: false,
-    value: name
-  })
-
   return config
 }
 
 if (process.env.TARGET) {
-  module.exports = genConfig(process.env.TARGET)
+  module.exports = genConfig(builds[process.env.TARGET])
 } else {
-  exports.getBuild = genConfig
-  exports.getAllBuilds = () => Object.keys(builds).map(genConfig)
+  exports.getBuild = name => genConfig(builds[name])
+  exports.getAllBuilds = () => Object.keys(builds).map(name => genConfig(builds[name]))
 }
