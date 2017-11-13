@@ -142,7 +142,7 @@ function initData (vm: Component) {
         vm
       )
     } else if (!isReserved(key)) {
-      proxy(vm, `_data`, key)
+      proxy(vm, '_data', key)
     }
   }
   // observe data
